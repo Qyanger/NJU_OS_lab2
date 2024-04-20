@@ -66,12 +66,16 @@ int32_t syscall(int num, uint32_t a1,uint32_t a2,
 
 char getChar(){ // 对应SYS_READ STD_IN
 	// TODO: 实现getChar函数，方式不限
+    char result=0;
+	while(result==0)
+    	result=syscall(SYS_READ, STD_IN, 0, 0, 0, 0);
+    return result;
 
 }
 
 void getStr(char *str, int size){ // 对应SYS_READ STD_STR
 	// TODO: 实现getStr函数，方式不限
-
+    while(!syscall(SYS_READ, STD_STR, (uint32_t)str, (uint32_t)size, 0, 0));
 }
 
 int dec2Str(int decimal, char *buffer, int size, int count);
@@ -82,7 +86,7 @@ void printf(const char *format,...){
 	int i=0; // format index
 	char buffer[MAX_BUFFER_SIZE];
 	int count=0; // buffer index
-	int index=0; // parameter index
+	//int index=0; // parameter index
 	void *paraList=(void*)&format; // address of format in stack
 	int state=0; // 0: legal character; 1: '%'; 2: illegal format
 	int decimal=0;
@@ -91,7 +95,60 @@ void printf(const char *format,...){
 	char character=0;
 	while(format[i]!=0){
 		// TODO: support format %d %x %s %c
+		char ch = format[i++];
+		switch(state) 
+		{
+			case 0:
+				if (ch == '%') 
+					state = 1;
+				else 
+				{
+					buffer[count++] = ch;
+					if (count == MAX_BUFFER_SIZE) 
+					{
+						syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)MAX_BUFFER_SIZE, 0, 0);
+						count = 0;
+					}
+				}
+				break;
+			case 1:
+				if (ch == 'd') 
+				{
+					decimal = *(int *)paraList;
+					paraList += 4;
+					count = dec2Str(decimal, buffer, MAX_BUFFER_SIZE, count);
+				}
+				else if (ch == 'x') 
+				{
+					hexadecimal = *(uint32_t *)paraList;
+					paraList += 4;
+					count = hex2Str(hexadecimal, buffer, MAX_BUFFER_SIZE, count);
+				}
+				else if (ch == 's') 
+				{
+					string = *(char **)paraList;
+					paraList += 4;
+					count = str2Str(string, buffer, MAX_BUFFER_SIZE, count);
+				}
+				else if (ch == 'c') 
+				{
+					character = *(char *)paraList;
+					paraList += 4;
+					count=c2Str(character,buffer,MAX_BUFFER_SIZE,count);
 
+				}
+				else 
+				{
+					state = 2;
+					return;
+				}
+
+			case 2: 
+				return;
+
+			default: 
+				return;
+		}
 
 
 	}
