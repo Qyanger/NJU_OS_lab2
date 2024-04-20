@@ -81,13 +81,22 @@ void getStr(char *str, int size){ // 对应SYS_READ STD_STR
 int dec2Str(int decimal, char *buffer, int size, int count);
 int hex2Str(uint32_t hexadecimal, char *buffer, int size, int count);
 int str2Str(char *string, char *buffer, int size, int count);
-
+int c2Str(char c,char *buffer, int size, int count)
+{
+	buffer[count]=c;
+	count++;
+	if(count==size) {
+		syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)size, 0, 0);
+		count=0;
+	}
+	return count;
+}
 void printf(const char *format,...){
 	int i=0; // format index
 	char buffer[MAX_BUFFER_SIZE];
 	int count=0; // buffer index
 	//int index=0; // parameter index
-	void *paraList=(void*)&format; // address of format in stack
+	void *paraList=(void*)&format+4; // address of format in stack
 	int state=0; // 0: legal character; 1: '%'; 2: illegal format
 	int decimal=0;
 	uint32_t hexadecimal=0;
@@ -104,14 +113,15 @@ void printf(const char *format,...){
 				else 
 				{
 					buffer[count++] = ch;
-					if (count == MAX_BUFFER_SIZE) 
+					if(count==MAX_BUFFER_SIZE)
 					{
-						syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)MAX_BUFFER_SIZE, 0, 0);
-						count = 0;
+						syscall(SYS_WRITE,STD_OUT,(uint32_t)buffer,(uint32_t)MAX_BUFFER_SIZE,0,0);
+						count=0;
 					}
 				}
 				break;
 			case 1:
+				state=0;
 				if (ch == 'd') 
 				{
 					decimal = *(int *)paraList;
@@ -131,20 +141,22 @@ void printf(const char *format,...){
 					count = str2Str(string, buffer, MAX_BUFFER_SIZE, count);
 				}
 				else if (ch == 'c') 
-				{
+				{ 
 					character = *(char *)paraList;
 					paraList += 4;
-					count=c2Str(character,buffer,MAX_BUFFER_SIZE,count);
-
+					buffer[count++] = character;
+					if (count == MAX_BUFFER_SIZE) 
+					{
+						syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)count, 0, 0);
+						count = 0;
+					}
 				}
 				else 
 				{
 					state = 2;
 					return;
 				}
-
-			case 2: 
-				return;
+				break;
 
 			default: 
 				return;
@@ -152,6 +164,7 @@ void printf(const char *format,...){
 
 
 	}
+
 	if(count!=0)
 		syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)count, 0, 0);
 }

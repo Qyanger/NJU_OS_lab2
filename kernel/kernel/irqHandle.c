@@ -183,22 +183,23 @@ void syscallGetChar(struct TrapFrame *tf){
 	// TODO: 自由实现
 	//换行flag
 	int flag=0;
-	int ttail=bufferTail,thead=bufferHead;
-	while(ttail>thead)
+	//前面的换行忽略
+	while(keyBuffer[bufferHead]=='\n')
+		++bufferHead;
+
+
+	if(keyBuffer[bufferTail-1]=='\n')
 	{
-		if(keyBuffer[ttail-1]=='\n')
-		{
-			flag=1;
-			break;
-		}
-		ttail--;
+		flag=1;
 	}
+
 	//回车
-	if(flag&&bufferTail>bufferHead)
+	if(flag&&(bufferTail!=bufferHead))
 	{
 		//开头第一个读入eax
 		tf->eax =keyBuffer[bufferHead];
-		bufferHead++;
+		//我们只要第一个 其他的不要
+		bufferHead=bufferTail;
 	}
 	else
 		tf->eax =0;
@@ -208,27 +209,21 @@ void syscallGetStr(struct TrapFrame *tf){
 	// TODO: 自由实现
 	int flag=0;
 
-	int thead=bufferHead,ttail=bufferTail;
-	int end=ttail;
-	
 	while(keyBuffer[bufferHead]=='\n')
 		++bufferHead;
 
-	while(ttail>thead)
+	if(keyBuffer[bufferTail-1]=='\n')
 	{
-		if(keyBuffer[ttail-1]=='\n')
-		{
-			flag=1;
-			end=ttail;
-		}
-		ttail--;
+		flag=1;
 	}
 
-	int size=end-thead;
+	//大小选小的
+	int size=bufferTail-bufferHead;
 	if(size>tf->ebx)
 		size=tf->ebx;
 	size--;
-	if(flag&&bufferTail>bufferHead)
+
+	if(flag&&(bufferTail!=bufferHead))
 	{
 		int i=0;
 		for(i=0;i<size;++i)
@@ -236,7 +231,7 @@ void syscallGetStr(struct TrapFrame *tf){
 			asm volatile("movl %1, %%es:(%0)"::"r"(tf->edx+i), "r"(keyBuffer[bufferHead++]));
 		}
 		asm volatile("movl %1, %%es:(%0)"::"r"(tf->edx+i), "r"('\0'));
-		bufferHead++;
+		bufferHead=bufferTail;
 		tf->eax=size;
 	}
 	else
