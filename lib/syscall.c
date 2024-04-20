@@ -81,16 +81,7 @@ void getStr(char *str, int size){ // 对应SYS_READ STD_STR
 int dec2Str(int decimal, char *buffer, int size, int count);
 int hex2Str(uint32_t hexadecimal, char *buffer, int size, int count);
 int str2Str(char *string, char *buffer, int size, int count);
-int c2Str(char c,char *buffer, int size, int count)
-{
-	buffer[count]=c;
-	count++;
-	if(count==size) {
-		syscall(SYS_WRITE, STD_OUT, (uint32_t)buffer, (uint32_t)size, 0, 0);
-		count=0;
-	}
-	return count;
-}
+
 void printf(const char *format,...){
 	int i=0; // format index
 	char buffer[MAX_BUFFER_SIZE];
